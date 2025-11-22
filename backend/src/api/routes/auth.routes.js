@@ -1,8 +1,8 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { body } = require('express-validator');
-const authController = require('../controllers/auth.controller');
-const validate = require('../middleware/validate');
+const { body } = require("express-validator");
+const authController = require("../controllers/auth.controller");
+const validate = require("../middleware/validate");
 
 /**
  * @route   POST /api/auth/register
@@ -10,15 +10,15 @@ const validate = require('../middleware/validate');
  * @access  Public
  */
 router.post(
-  '/register',
+  "/register",
   [
-    body('email').isEmail().withMessage('Please provide a valid email'),
-    body('password')
+    body("email").isEmail().withMessage("Please provide a valid email"),
+    body("password")
       .isLength({ min: 6 })
-      .withMessage('Password must be at least 6 characters'),
-    body('firstName').notEmpty().withMessage('First name is required'),
-    body('lastName').notEmpty().withMessage('Last name is required'),
-    body('role').optional().isIn(['ADMIN', 'MANAGER', 'STAFF'])
+      .withMessage("Password must be at least 6 characters"),
+    body("firstName").notEmpty().withMessage("First name is required"),
+    body("lastName").notEmpty().withMessage("Last name is required"),
+    body("role").optional().isIn(["ADMIN", "MANAGER", "STAFF"]),
   ],
   validate,
   authController.register
@@ -30,10 +30,10 @@ router.post(
  * @access  Public
  */
 router.post(
-  '/login',
+  "/login",
   [
-    body('email').isEmail().withMessage('Please provide a valid email'),
-    body('password').notEmpty().withMessage('Password is required')
+    body("email").isEmail().withMessage("Please provide a valid email"),
+    body("password").notEmpty().withMessage("Password is required"),
   ],
   validate,
   authController.login
@@ -44,7 +44,21 @@ router.post(
  * @desc    Get current logged in user
  * @access  Private
  */
-router.get('/me', authController.getMe);
+router.get("/me", authController.getMe);
+
+/**
+ * @route   POST /api/auth/verify-otp
+ * @desc    Verify OTP
+ * @access  Public
+ */
+router.post(
+  "/verify-otp",
+  [
+    body("userId").notEmpty().withMessage("User ID is required"),
+    body("otp").notEmpty().withMessage("OTP is required"),
+  ],
+  validate,
+  authController.verifyOtp
+);
 
 module.exports = router;
-
