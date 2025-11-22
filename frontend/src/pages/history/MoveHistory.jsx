@@ -289,12 +289,6 @@ const DetailModal = ({ row, onClose }) => {
 
 // List View Component
 const ListView = ({ rows, onRowClick }) => {
-  const getRowColor = (type) => {
-    if (type === 'RECEIPT') return 'border-l-4 border-green-500 bg-green-50';
-    if (type === 'DELIVERY') return 'border-l-4 border-red-500 bg-red-50';
-    return 'border-l-4 border-purple-500 bg-purple-50';
-  };
-
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
       <div className="overflow-x-auto">
@@ -320,7 +314,7 @@ const ListView = ({ rows, onRowClick }) => {
                 <tr
                   key={index}
                   onClick={() => onRowClick(row)}
-                  className={`cursor-pointer hover:bg-gray-100 transition-colors ${getRowColor(row.documentType)}`}
+                  className="cursor-pointer hover:bg-gray-50 transition-colors"
                 >
                   <td className="px-4 py-3 text-sm font-mono font-medium text-gray-900">{row.documentNumber}</td>
                   <td className="px-4 py-3 text-sm text-gray-600">

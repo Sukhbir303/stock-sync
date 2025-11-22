@@ -7,7 +7,18 @@ const prisma = new PrismaClient();
  */
 exports.createProduct = async (req, res, next) => {
   try {
-    const { name, skuCode, description, category, uom, reorderLevel } = req.body;
+    const { 
+      name, 
+      skuCode, 
+      description, 
+      category, 
+      uom, 
+      reorderLevel,
+      brand,
+      unitCost,
+      sellingPrice,
+      barcode
+    } = req.body;
 
     const product = await prisma.product.create({
       data: {
@@ -16,7 +27,11 @@ exports.createProduct = async (req, res, next) => {
         description,
         category,
         uom,
-        reorderLevel: reorderLevel ? parseInt(reorderLevel) : null
+        reorderLevel: reorderLevel ? parseInt(reorderLevel) : null,
+        brand,
+        unitCost: unitCost ? parseFloat(unitCost) : null,
+        sellingPrice: sellingPrice ? parseFloat(sellingPrice) : null,
+        barcode: barcode || null
       }
     });
 
@@ -106,6 +121,11 @@ exports.updateProduct = async (req, res, next) => {
     const { id } = req.params;
     const updateData = req.body;
 
+    // Sanitize optional unique fields
+    if (updateData.barcode === '') {
+      updateData.barcode = null;
+    }
+
     const product = await prisma.product.update({
       where: { id },
       data: updateData
@@ -121,21 +141,21 @@ exports.updateProduct = async (req, res, next) => {
 };
 
 /**
- * @desc    Delete product (soft delete)
+ * @desc    Delete product (Hard Delete)
  * @route   DELETE /api/products/:id
  */
 exports.deleteProduct = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    await prisma.product.update({
-      where: { id },
-      data: { isActive: false }
+    // Delete the product (Cascade will remove related StockLevels and StockLedger)
+    await prisma.product.delete({
+      where: { id }
     });
 
     res.status(200).json({
       success: true,
-      message: 'Product deactivated successfully'
+      message: 'Product deleted successfully'
     });
   } catch (error) {
     next(error);

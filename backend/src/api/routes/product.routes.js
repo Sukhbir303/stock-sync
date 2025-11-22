@@ -54,7 +54,7 @@ router.put('/:id', authorize('MANAGER', 'ADMIN'), productController.updateProduc
  * @desc    Delete product (soft delete)
  * @access  Private (ADMIN)
  */
-router.delete('/:id', authorize('ADMIN'), productController.deleteProduct);
+router.delete('/:id', authorize('ADMIN', 'MANAGER'), productController.deleteProduct);
 
 module.exports = router;
 
