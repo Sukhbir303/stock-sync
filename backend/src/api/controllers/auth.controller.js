@@ -1,6 +1,8 @@
-const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const { PrismaClient } = require("@prisma/client");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const nodemailer = require("nodemailer");
+const crypto = require("crypto");
 
 const prisma = new PrismaClient();
 
@@ -9,12 +11,30 @@ const prisma = new PrismaClient();
  */
 const generateToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE || '7d'
+    expiresIn: process.env.JWT_EXPIRE || "7d",
   });
 };
 
 /**
- * @desc    Register a new user
+ * Configure nodemailer transporter
+ */
+const transporter = nodemailer.createTransport({
+  service: "Gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
+/**
+ * Generate OTP
+ */
+const generateOtp = () => {
+  return crypto.randomInt(100000, 999999).toString();
+};
+
+/**
+ * @desc    Register a new user with OTP
  * @route   POST /api/auth/register
  */
 exports.register = async (req, res, next) => {
@@ -23,13 +43,13 @@ exports.register = async (req, res, next) => {
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
     });
 
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: 'User with this email already exists'
+        message: "User with this email already exists",
       });
     }
 
@@ -38,8 +58,12 @@ exports.register = async (req, res, next) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     // Validate role if provided, otherwise default to STAFF
-    const validRoles = ['ADMIN', 'MANAGER', 'STAFF'];
-    const userRole = role && validRoles.includes(role) ? role : 'STAFF';
+    const validRoles = ["ADMIN", "MANAGER", "STAFF"];
+    const userRole = role && validRoles.includes(role) ? role : "STAFF";
+
+    // Generate OTP
+    const otp = generateOtp();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
 
     // Create user
     const user = await prisma.user.create({
@@ -48,7 +72,10 @@ exports.register = async (req, res, next) => {
         password: hashedPassword,
         firstName,
         lastName,
-        role: userRole
+        role: userRole,
+        otp,
+        otpExpiry,
+        isActive: false, // User is inactive until OTP is verified
       },
       select: {
         id: true,
@@ -56,19 +83,79 @@ exports.register = async (req, res, next) => {
         firstName: true,
         lastName: true,
         role: true,
-        createdAt: true
-      }
+        createdAt: true,
+      },
     });
 
-    // Generate token
-    const token = generateToken(user.id);
+    // Send OTP to user's email
+    try {
+      await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: user.email, // Fetch email from the created user object
+        subject: "Your OTP for StockMaster",
+        text: `Your OTP is ${otp}. It is valid for 10 minutes.`,
+      });
+    } catch (emailError) {
+      console.error("Failed to send OTP email:", emailError);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send OTP email. Please try again later.",
+      });
+    }
 
     res.status(201).json({
       success: true,
+      message:
+        "User registered successfully. Please verify your email with the OTP sent.",
+      data: { userId: user.id },
+    });
+  } catch (error) {
+    console.error("Error during registration:", error);
+    next(error);
+  }
+};
+
+/**
+ * @desc    Verify OTP
+ * @route   POST /api/auth/verify-otp
+ */
+exports.verifyOtp = async (req, res, next) => {
+  try {
+    const { userId, otp } = req.body;
+
+    // Find user
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Check if OTP is valid
+    if (user.otp !== otp || user.otpExpiry < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired OTP",
+      });
+    }
+
+    // Activate user
+    await prisma.user.update({
+      where: { id: userId },
       data: {
-        user,
-        token
-      }
+        isActive: true,
+        otp: null,
+        otpExpiry: null,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "OTP verified successfully. Your account is now active.",
     });
   } catch (error) {
     next(error);
@@ -85,13 +172,13 @@ exports.login = async (req, res, next) => {
 
     // Find user
     const user = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
     });
 
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: "Invalid credentials",
       });
     }
 
@@ -99,7 +186,7 @@ exports.login = async (req, res, next) => {
     if (!user.isActive) {
       return res.status(401).json({
         success: false,
-        message: 'Account is deactivated'
+        message: "Account is deactivated",
       });
     }
 
@@ -109,14 +196,14 @@ exports.login = async (req, res, next) => {
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: "Invalid credentials",
       });
     }
 
     // Update last login
     await prisma.user.update({
       where: { id: user.id },
-      data: { lastLogin: new Date() }
+      data: { lastLogin: new Date() },
     });
 
     // Generate token
@@ -130,10 +217,10 @@ exports.login = async (req, res, next) => {
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
-          role: user.role
+          role: user.role,
         },
-        token
-      }
+        token,
+      },
     });
   } catch (error) {
     next(error);
@@ -156,16 +243,15 @@ exports.getMe = async (req, res, next) => {
         role: true,
         isActive: true,
         lastLogin: true,
-        createdAt: true
-      }
+        createdAt: true,
+      },
     });
 
     res.status(200).json({
       success: true,
-      data: user
+      data: user,
     });
   } catch (error) {
     next(error);
   }
 };
-

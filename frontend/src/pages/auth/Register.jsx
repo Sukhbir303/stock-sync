@@ -1,29 +1,35 @@
-import { Mail, Lock, User, UserPlus, Shield } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { useMutation } from '@tanstack/react-query';
-import { authService } from '../../services/authService';
-import { useAuthStore } from '../../stores/authStore';
-import toast from 'react-hot-toast';
+import { Mail, Lock, User, UserPlus, Shield } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { useMutation } from "@tanstack/react-query";
+import { authService } from "../../services/authService";
+import { useAuthStore } from "../../stores/authStore";
+import toast from "react-hot-toast";
 
 const Register = () => {
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
-  const { register, handleSubmit, watch, formState: { errors } } = useForm({
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = useForm({
     defaultValues: {
-      role: 'STAFF' // Default role
-    }
+      role: "STAFF", // Default role
+    },
   });
 
   const registerMutation = useMutation({
     mutationFn: authService.register,
     onSuccess: (data) => {
-      setAuth(data.data.user, data.data.token);
-      toast.success('Account created successfully!');
-      navigate('/dashboard');
+      localStorage.setItem("userId", data.data.userId); // Save userId for OTP verification
+      localStorage.setItem("userEmail", data.data.email); // Save userEmail for OTP verification
+      toast.success("Account created successfully! Please verify your email.");
+      navigate("/verify-otp"); // Redirect to OTP verification page
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || 'Registration failed');
+      toast.error(error.response?.data?.message || "Registration failed");
     },
   });
 
@@ -47,13 +53,15 @@ const Register = () => {
             </div>
             <input
               type="text"
-              className={`input pl-10 ${errors.firstName ? 'input-error' : ''}`}
+              className={`input pl-10 ${errors.firstName ? "input-error" : ""}`}
               placeholder="John"
-              {...register('firstName', { required: 'First name is required' })}
+              {...register("firstName", { required: "First name is required" })}
             />
           </div>
           {errors.firstName && (
-            <p className="mt-1 text-sm text-danger-500">{errors.firstName.message}</p>
+            <p className="mt-1 text-sm text-danger-500">
+              {errors.firstName.message}
+            </p>
           )}
         </div>
 
@@ -66,13 +74,15 @@ const Register = () => {
             </div>
             <input
               type="text"
-              className={`input pl-10 ${errors.lastName ? 'input-error' : ''}`}
+              className={`input pl-10 ${errors.lastName ? "input-error" : ""}`}
               placeholder="Doe"
-              {...register('lastName', { required: 'Last name is required' })}
+              {...register("lastName", { required: "Last name is required" })}
             />
           </div>
           {errors.lastName && (
-            <p className="mt-1 text-sm text-danger-500">{errors.lastName.message}</p>
+            <p className="mt-1 text-sm text-danger-500">
+              {errors.lastName.message}
+            </p>
           )}
         </div>
 
@@ -84,8 +94,8 @@ const Register = () => {
               <Shield size={18} className="text-gray-400" />
             </div>
             <select
-              className={`input pl-10 ${errors.role ? 'input-error' : ''} bg-white`}
-              {...register('role', { required: 'Role is required' })}
+              className={`input pl-10 ${errors.role ? "input-error" : ""} bg-white`}
+              {...register("role", { required: "Role is required" })}
             >
               <option value="STAFF">Warehouse Staff</option>
               <option value="MANAGER">Inventory Manager</option>
@@ -93,7 +103,9 @@ const Register = () => {
             </select>
           </div>
           {errors.role && (
-            <p className="mt-1 text-sm text-danger-500">{errors.role.message}</p>
+            <p className="mt-1 text-sm text-danger-500">
+              {errors.role.message}
+            </p>
           )}
           <p className="mt-1 text-xs text-gray-500">
             Select your role to access specific features
@@ -109,19 +121,21 @@ const Register = () => {
             </div>
             <input
               type="email"
-              className={`input pl-10 ${errors.email ? 'input-error' : ''}`}
+              className={`input pl-10 ${errors.email ? "input-error" : ""}`}
               placeholder="your@email.com"
-              {...register('email', { 
-                required: 'Email is required',
+              {...register("email", {
+                required: "Email is required",
                 pattern: {
                   value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                  message: 'Invalid email address'
-                }
+                  message: "Invalid email address",
+                },
               })}
             />
           </div>
           {errors.email && (
-            <p className="mt-1 text-sm text-danger-500">{errors.email.message}</p>
+            <p className="mt-1 text-sm text-danger-500">
+              {errors.email.message}
+            </p>
           )}
         </div>
 
@@ -134,19 +148,21 @@ const Register = () => {
             </div>
             <input
               type="password"
-              className={`input pl-10 ${errors.password ? 'input-error' : ''}`}
+              className={`input pl-10 ${errors.password ? "input-error" : ""}`}
               placeholder="••••••••"
-              {...register('password', { 
-                required: 'Password is required',
+              {...register("password", {
+                required: "Password is required",
                 minLength: {
                   value: 6,
-                  message: 'Password must be at least 6 characters'
-                }
+                  message: "Password must be at least 6 characters",
+                },
               })}
             />
           </div>
           {errors.password && (
-            <p className="mt-1 text-sm text-danger-500">{errors.password.message}</p>
+            <p className="mt-1 text-sm text-danger-500">
+              {errors.password.message}
+            </p>
           )}
         </div>
 
@@ -159,16 +175,19 @@ const Register = () => {
             </div>
             <input
               type="password"
-              className={`input pl-10 ${errors.confirmPassword ? 'input-error' : ''}`}
+              className={`input pl-10 ${errors.confirmPassword ? "input-error" : ""}`}
               placeholder="••••••••"
-              {...register('confirmPassword', {
-                required: 'Please confirm your password',
-                validate: (value) => value === watch('password') || 'Passwords do not match'
+              {...register("confirmPassword", {
+                required: "Please confirm your password",
+                validate: (value) =>
+                  value === watch("password") || "Passwords do not match",
               })}
             />
           </div>
           {errors.confirmPassword && (
-            <p className="mt-1 text-sm text-danger-500">{errors.confirmPassword.message}</p>
+            <p className="mt-1 text-sm text-danger-500">
+              {errors.confirmPassword.message}
+            </p>
           )}
         </div>
 
@@ -191,8 +210,11 @@ const Register = () => {
 
       {/* Login Link */}
       <p className="mt-6 text-center text-sm text-gray-600">
-        Already have an account?{' '}
-        <Link to="/login" className="text-primary-600 hover:text-primary-700 font-medium">
+        Already have an account?{" "}
+        <Link
+          to="/login"
+          className="text-primary-600 hover:text-primary-700 font-medium"
+        >
           Sign in
         </Link>
       </p>
@@ -201,4 +223,3 @@ const Register = () => {
 };
 
 export default Register;
-

@@ -16,27 +16,25 @@ datasource db {
 
 // User Management & Authentication
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  password     String
-  firstName    String   @map("first_name")
-  lastName     String   @map("last_name")
-  role         UserRole @default(STAFF)
-  isActive     Boolean  @default(true) @map("is_active")
-  lastLogin    DateTime? @map("last_login")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id         String   @id @default(cuid())
+  email      String   @unique
+  password   String
+  firstName  String
+  lastName   String
+  role       String   @default("STAFF") // Set a default value
+  isActive   Boolean  @default(false)
+  lastLogin  DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Add these fields
+  otp        String?  // OTP is optional
+  otpExpiry  DateTime? // OTP expiry is optional
 
   // Relations
   createdMoves StockLedger[] @relation("CreatedBy")
 
   @@map("users")
-}
-
-enum UserRole {
-  ADMIN           // Full system access
-  MANAGER         // Inventory management (Desktop focus)
-  STAFF           // Warehouse operations (Mobile focus)
 }
 
 // Product Master Data
